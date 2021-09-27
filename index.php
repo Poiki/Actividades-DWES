@@ -45,15 +45,15 @@
 
                     // Ahora, la tabla con los datos de las peliculas
                     echo "<table border ='1'>";
-                    while ($fila = $result->fetch_object()) {
+                    while ($pelicula = $result->fetch_object()) {
                         echo "<tr>";
-                        echo "<td>" . $fila->titulo . "</td>";
-                        echo "<td>" . $fila->genero . "</td>";
-                        echo "<td>" . $fila->pais . "</td>";
-                        echo "<td>" . $fila->anyo . "</td>";
-                        echo "<td>" . $fila->cartel . "</td>";
-                        echo "<td><a href='index.php?action=formularioModificarPelicula&idPelicula=" . $fila->idPelicula . "'>Modificar</a></td>";
-                        echo "<td><a href='index.php?action=borrarPelicula&idPelicula=" . $fila->idPelicula . "'>Borrar</a></td>";
+                        echo "<td>" . $pelicula->titulo . "</td>";
+                        echo "<td>" . $pelicula->genero . "</td>";
+                        echo "<td>" . $pelicula->pais . "</td>";
+                        echo "<td>" . $pelicula->anyo . "</td>";
+                        echo "<td><img src='" . $pelicula->cartel . "' width='100'></td>";
+                        echo "<td><a href='index.php?action=formularioModificarPelicula&idPelicula=" . $pelicula->idPelicula . "'>Modificar</a></td>";
+                        echo "<td><a href='index.php?action=borrarPelicula&idPelicula=" . $pelicula->idPelicula . "'>Borrar</a></td>";
                         echo "</tr>";
                     }
                     echo "</table>";
@@ -79,13 +79,14 @@
                     Género:<input type='text' name='genero'><br>
                     País:<input type='text' name='pais'><br>
                     Año:<input type='text' name='anyo'><br>
-                    Cartel:<input type='text' name='cartel'><br>";
+                    Cartel:<input type='text' name='cartel'><br>
+                    Actores:<input type= 'text' name='actores'";
 
             // Añadimos un selector para el id de los actores
             $result = $db->query("SELECT * FROM personas");
             echo "Actores: <select name='personas[]' multiple='true'>";
-            while ($fila = $result->fetch_object()) {
-                echo "<option value='" . $fila->idPersona . "'>" . $fila->nombre . " " . $fila->apellido . "</option>";
+            while ($pelicula = $result->fetch_object()) {
+                echo "<option value='" . $pelicula->idPersona . "'>" . $pelicula->nombre . " " . $pelicula->apellidos . "</option>";
             }
             echo "</select>";
             echo "<a href='index.php?action=formularioInsertarActores'>Añadir nuevo</a><br>";
@@ -110,14 +111,14 @@
             $pais = $_REQUEST["pais"];
             $anyo = $_REQUEST["anyo"];
             $cartel = $_REQUEST["cartel"];
-            $actores = $_REQUEST["idPersona"];
+            $actores = $_REQUEST["actores"];
 
             // Lanzamos el INSERT contra la BD.
             echo "INSERT INTO peliculas (titulo,genero,pais,anyo,cartel) VALUES ('$titulo','$genero', '$pais', '$anyo', '$cartel')";
             $db->query("INSERT INTO peliculas (titulo,genero,pais,anyo,cartel) VALUES ('$titulo','$genero', '$pais', '$anyo', '$cartel')");
             if ($db->affected_rows == 1) {
                 // Si la inserción del peliculas ha funcionado, continuamos insertando en la tabla "actuan"
-                // Tenemos que averiguar qué idPeliculas se ha asignado a la pelicula que acabamos de insertar
+                // Tenemos que averiguar qué idPelicula se ha asignado a la pelicula que acabamos de insertar
                 $result = $db->query("SELECT MAX(idPelicula) AS ultimoIdPelicula FROM peliculas");
                 $idPelicula = $result->fetch_object()->ultimoIdpelicula;
                 // Ya podemos insertar todos los actores junto con la pelicula en "actuan"
@@ -158,8 +159,8 @@
             echo "<h1>Modificación de peliculas</h1>";
 
             // Recuperamos el id de la pelicula que vamos a modificar y sacamos el resto de sus datos de la BD
-            $idPeliculas = $_REQUEST["idPeliculas"];
-            $result = $db->query("SELECT * FROM peliculas WHERE peliculas.idPelicula = '$idPeliculas'");
+            $idPelicula = $_REQUEST["idPelicula"];
+            $result = $db->query("SELECT * FROM peliculas WHERE peliculas.idPelicula = '$idPelicula'");
             $pelicula = $result->fetch_object();
 
             // Creamos el formulario con los campos de la pelicula
@@ -170,7 +171,7 @@
                     Género:<input type='text' name='genero' value='$pelicula->genero'><br>
                     País:<input type='text' name='pais' value='$pelicula->pais'><br>
                     Año:<input type='text' name='anyo' value='$pelicula->anyo'><br>
-                    Cartel:<input type='image' name='cartel' value='$pelicula->cartel'><br>";
+                    Cartel:<input type='image' name='cartel' src='$pelicula->cartel' width=100px align='center'><br>";
 
             // Vamos a añadir un selector para el id de los actores.
             // Para que salgan preseleccionados los actores de la pelicula que estamos modificando, vamos a buscar
@@ -185,11 +186,11 @@
 
             // Ya tenemos todos los datos para añadir el selector de actores al formulario
             echo "Actores: <select name='actor[]' multiple size='3'>";
-            while ($fila = $todosLosActores->fetch_object()) {
-                if (in_array($fila->idPersona, $listaActoresPelicula))
-                    echo "<option value='$fila->idPersona' selected>$fila->nombre $fila->apellido</option>";
+            while ($pelicula = $todosLosActores->fetch_object()) {
+                if (in_array($pelicula->idPersona, $listaActoresPelicula))
+                    echo "<option value='$pelicula->idPersona' selected>$pelicula->nombre $pelicula->apellidos</option>";
                 else
-                    echo "<option value='$fila->idPersona'>$fila->nombre $fila->apellido</option>";
+                    echo "<option value='$pelicula->idPersona'>$pelicula->nombre $pelicula->apellidos</option>";
             }
             echo "</select>";
 
@@ -258,7 +259,7 @@
 					WHERE peliculas.titulo LIKE '%$textoBusqueda%'
 					OR peliculas.genero LIKE '%$textoBusqueda%'
 					OR personas.nombre LIKE '%$textoBusqueda%'
-					OR personas.apellido LIKE '%$textoBusqueda%'
+					OR personas.apellidos LIKE '%$textoBusqueda%'
 					ORDER BY peliculas.titulo")) {
 
                 // La consulta se ha ejecutado con éxito. Vamos a ver si contiene registros
@@ -272,15 +273,15 @@
                           </form><br>";
                     // Después, la tabla con los datos
                     echo "<table border ='1'>";
-                    while ($fila = $result->fetch_object()) {
+                    while ($pelicula = $result->fetch_object()) {
                         echo "<tr>";
-                        echo "<td>" . $fila->titulo . "</td>";
-                        echo "<td>" . $fila->genero . "</td>";
-                        echo "<td>" . $fila->nombre . "</td>";
-                        echo "<td>" . $fila->apellido . "</td>";
-                        echo "<td>" . $fila->cartel . "</td>";
-                        echo "<td><a href='index.php?action=formularioModificarPeliculas&idpelicula=" . $fila->idPelicula . "'>Modificar</a></td>";
-                        echo "<td><a href='index.php?action=borrarPeliculas&idPelicula=" . $fila->idPelicula . "'>Borrar</a></td>";
+                        echo "<td>" . $pelicula->titulo . "</td>";
+                        echo "<td>" . $pelicula->genero . "</td>";
+                        echo "<td>" . $pelicula->nombre . "</td>";
+                        echo "<td>" . $pelicula->apellidos . "</td>";
+                        echo "<td>" . $pelicula->cartel . "</td>";
+                        echo "<td><a href='index.php?action=formularioModificarPeliculas&idpelicula=" . $pelicula->idPelicula . "'>Modificar</a></td>";
+                        echo "<td><a href='index.php?action=borrarPeliculas&idPelicula=" . $pelicula->idPelicula . "'>Borrar</a></td>";
                         echo "</tr>";
                     }
                     echo "</table>";
