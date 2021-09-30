@@ -28,8 +28,8 @@
 
             // Buscamos todos las peliculas del videoclub
             if ($result = $db->query("SELECT * FROM peliculas
-                                        LEFT JOIN actuan ON peliculas.idPelicula = actuan.idPelicula
-                                        LEFT JOIN personas ON actuan.idPersona = personas.idPersona
+                                        LEFT JOIN actuan ON peliculas.idPeliculas = actuan.id_Pelicula
+                                        LEFT JOIN personas ON actuan.id_Persona = personas.idPersonas
                                         ORDER BY peliculas.titulo")) {
 
                 // La consulta se ha ejecutado con éxito. Vamos a ver si contiene registros
@@ -51,9 +51,9 @@
                         echo "<td>" . $pelicula->genero . "</td>";
                         echo "<td>" . $pelicula->pais . "</td>";
                         echo "<td>" . $pelicula->anyo . "</td>";
-                        echo "<td><img src='" . $pelicula->cartel . "' width='100'></td>";
-                        echo "<td><a href='index.php?action=formularioModificarPelicula&idPelicula=" . $pelicula->idPelicula . "'>Modificar</a></td>";
-                        echo "<td><a href='index.php?action=borrarPelicula&idPelicula=" . $pelicula->idPelicula . "'>Borrar</a></td>";
+                        echo "<td><img src='images/" . $pelicula->cartel . "' width='100'></td>";
+                        echo "<td><a href='index.php?action=formularioModificarPelicula&idPeliculas=" . $pelicula->idPeliculas . "'>Modificar</a></td>";
+                        echo "<td><a href='index.php?action=borrarPelicula&idPeliculas=" . $pelicula->idPeliculas . "'>Borrar</a></td>";
                         echo "</tr>";
                     }
                     echo "</table>";
@@ -74,16 +74,17 @@
             echo "<h1>Modificación de Peliculas</h1>";
 
             // Creamos el formulario con los campos de la pelicula
-            echo "<form action = 'index.php' method = 'get'>
+            echo "<form  enctype='multipart/form-data' action = 'index.php' method = 'POST'>
                     Título:<input type='text' name='titulo'><br>
                     Género:<input type='text' name='genero'><br>
                     País:<input type='text' name='pais'><br>
                     Año:<input type='text' name='anyo'><br>
-                    Cartel:<input type='text' name='cartel'><br>
-                    Actores:<input type= 'text' name='actores'";
+                    Cartel:<input type='file' name='cartel'><br>
+                    Actores:<input type= 'text' name='actores[]'>";
 
             // Añadimos un selector para el id de los actores
             $result = $db->query("SELECT * FROM personas");
+            echo "<br>";
             echo "Actores: <select name='personas[]' multiple='true'>";
             while ($pelicula = $result->fetch_object()) {
                 echo "<option value='" . $pelicula->idPersona . "'>" . $pelicula->nombre . " " . $pelicula->apellidos . "</option>";
@@ -109,21 +110,32 @@
             $titulo = $_REQUEST["titulo"];
             $genero = $_REQUEST["genero"];
             $pais = $_REQUEST["pais"];
-            $anyo = $_REQUEST["anyo"];
-            $cartel = $_REQUEST["cartel"];
+            $anyo = $_REQUEST["anyo"]; 
             $actores = $_REQUEST["actores"];
 
+            // Guardar cartel en la carpeta imágenes
+            $dir_subida = 'C:\xampp\htdocs\Actividades-DWES\images';
+            $nombre_cartel = str_replace(' ', '_', strtolower($_REQUEST["titulo"]) . '.jpg');
+            $fichero_subido = $dir_subida . '\\' . $nombre_cartel;
+
+            echo '<pre>';
+            if (move_uploaded_file($_FILES['cartel']['tmp_name'], $fichero_subido)) {
+                echo "El fichero se subió con éxito.\n";
+            } else {
+                echo "Error, no se ha subido el fichero\n";
+            }
+
             // Lanzamos el INSERT contra la BD.
-            echo "INSERT INTO peliculas (titulo,genero,pais,anyo,cartel) VALUES ('$titulo','$genero', '$pais', '$anyo', '$cartel')";
-            $db->query("INSERT INTO peliculas (titulo,genero,pais,anyo,cartel) VALUES ('$titulo','$genero', '$pais', '$anyo', '$cartel')");
+            echo "INSERT INTO peliculas (titulo,genero,pais,anyo,cartel) VALUES ('$titulo','$genero', '$pais', '$anyo', '$nombre_cartel')";
+            $db->query("INSERT INTO peliculas (titulo,genero,pais,anyo,cartel) VALUES ('$titulo','$genero', '$pais', '$anyo', '$nombre_cartel')");
             if ($db->affected_rows == 1) {
                 // Si la inserción del peliculas ha funcionado, continuamos insertando en la tabla "actuan"
-                // Tenemos que averiguar qué idPelicula se ha asignado a la pelicula que acabamos de insertar
-                $result = $db->query("SELECT MAX(idPelicula) AS ultimoIdPelicula FROM peliculas");
-                $idPelicula = $result->fetch_object()->ultimoIdpelicula;
+                // Tenemos que averiguar qué idPeliculas se ha asignado a la pelicula que acabamos de insertar
+                $result = $db->query("SELECT MAX(idPeliculas) AS ultimoidPeliculas FROM peliculas");
+                $idPeliculas = $result->fetch_object()->ultimoidPeliculas;
                 // Ya podemos insertar todos los actores junto con la pelicula en "actuan"
                 foreach ($actores as $idPersona) {
-                    $db->query("INSERT INTO actuan(idPelicula, idPersona) VALUES('$idPelicula', '$idPersona')");
+                    $db->query("INSERT INTO actuan(id_Pelicula, id_Persona) VALUES('$idPeliculas', '$idPersona')");
                 }
                 echo "Pelicula insertado con éxito";
             } else {
@@ -140,8 +152,8 @@
             echo "<h1>Borrar pelicula</h1>";
 
             // Recuperamos el id de la pelicula y lanzamos el DELETE contra la BD
-            $idPelicula = $_REQUEST["idPelicula"];
-            $db->query("DELETE FROM peliculas WHERE idPelicula = '$idPelicula'");
+            $idPeliculas = $_REQUEST["idPeliculas"];
+            $db->query("DELETE FROM peliculas WHERE idPeliculas = '$idPeliculas'");
 
             // Mostramos mensaje con el resultado de la operación
             if ($db->affected_rows == 0) {
@@ -159,29 +171,30 @@
             echo "<h1>Modificación de peliculas</h1>";
 
             // Recuperamos el id de la pelicula que vamos a modificar y sacamos el resto de sus datos de la BD
-            $idPelicula = $_REQUEST["idPelicula"];
-            $result = $db->query("SELECT * FROM peliculas WHERE peliculas.idPelicula = '$idPelicula'");
+            $idPeliculas = $_REQUEST["idPeliculas"];
+            $result = $db->query("SELECT * FROM peliculas WHERE peliculas.idPeliculas = '$idPeliculas'");
             $pelicula = $result->fetch_object();
 
             // Creamos el formulario con los campos de la pelicula
             // y lo rellenamos con los datos que hemos recuperado de la BD
             echo "<form action = 'index.php' method = 'get'>
-				    <input type='hidden' name='idPelicula' value='$idPelicula'>
+				    <input type='hidden' name='idPeliculas' value='$idPeliculas'>
                     Título:<input type='text' name='titulo' value='$pelicula->titulo'><br>
                     Género:<input type='text' name='genero' value='$pelicula->genero'><br>
                     País:<input type='text' name='pais' value='$pelicula->pais'><br>
                     Año:<input type='text' name='anyo' value='$pelicula->anyo'><br>
-                    Cartel:<input type='image' name='cartel' src='$pelicula->cartel' width=100px align='center'><br>";
+                    Cartel:<input type='file' name='cartel'><br>
+                    <img src='images/" . $pelicula->cartel . "' width='100' align='center'><br>";
 
             // Vamos a añadir un selector para el id de los actores.
             // Para que salgan preseleccionados los actores de la pelicula que estamos modificando, vamos a buscar
             // también a esos actores.
             $todosLosActores = $db->query("SELECT * FROM personas");  // Obtener todos los actores
-            $actoresPelicula = $db->query("SELECT idPersona FROM actuan WHERE idPelicula = '$idPelicula'");             // Obtener solo los actores de la pelicula que estamos buscando
+            $actoresPelicula = $db->query("SELECT id_Persona FROM actuan WHERE id_Pelicula = '$idPeliculas'");             // Obtener solo los actores de la pelicula que estamos buscando
             // Vamos a convertir esa lista de actores de la pelicula en un array de ids de personas
             $listaActoresPelicula = array();
             while ($actor = $actoresPelicula->fetch_object()) {
-                $listaActoresPelicula[] = $actor->idPersona;
+                $listaActoresPelicula[] = $actor->id_Persona;
             }
 
             // Ya tenemos todos los datos para añadir el selector de actores al formulario
@@ -198,7 +211,7 @@
             echo "<a href='index.php?action=formularioInsertarActores'>Añadir nuevo</a><br>";
 
             // Finalizamos el formulario
-            echo "  <input type='hidden' name='action' value='modificarPelicula'>
+            echo "  <input type='hidden' name='action' value='modificarPeliculas'>
                     <input type='submit'>
                   </form>";
             echo "<p><a href='index.php'>Volver</a></p>";
@@ -212,7 +225,7 @@
 
             // Vamos a procesar el formulario de modificación de peliculas
             // Primero, recuperamos todos los datos del formulario
-            $idPelicula = $_REQUEST["idPelicula"];
+            $idPeliculas = $_REQUEST["idPeliculas"];
             $titulo = $_REQUEST["titulo"];
             $genero = $_REQUEST["genero"];
             $pais = $_REQUEST["pais"];
@@ -227,15 +240,15 @@
 							pais = '$pais',
 							anyo = '$anyo',
 							cartel = '$cartel'
-							WHERE idPelicula = '$idPelicula'");
+							WHERE idPeliculas = '$idPeliculas'");
 
             if ($db->affected_rows == 1) {
                 // Si la modificación de la pelicula ha funcionado, continuamos actualizando la tabla "actuan".
                 // Primero borraremos todos los registros de la pelicula actual y luego los insertaremos de nuevo
-                $db->query("DELETE FROM actuan WHERE idPelicula = '$idPelicula'");
+                $db->query("DELETE FROM actuan WHERE id_Pelicula = '$idPeliculas'");
                 // Ya podemos insertar todos los actores junto con la pelicula en "actuan"
                 foreach ($actores as $idPersona) {
-                    $db->query("INSERT INTO actuan(idPelicula, idPersona) VALUES('$idPelicula', '$idPersona')");
+                    $db->query("INSERT INTO actuan(id_Pelicula, id_Persona) VALUES('$idPeliculas', '$idPersona')");
                 }
                 echo "Pelicula actualizada con éxito";
             } else {
@@ -247,15 +260,15 @@
 
             // --------------------------------- BUSCAR PELICULAS ----------------------------------------
 
-        case "buscarPelicula":
+        case "buscarPeliculas":
             // Recuperamos el texto de búsqueda de la variable de formulario
             $textoBusqueda = $_REQUEST["textoBusqueda"];
             echo "<h1>Resultados de la búsqueda: \"$textoBusqueda\"</h1>";
-
+            
             // Buscamos los peliculas de la biblioteca que coincidan con el texto de búsqueda
             if ($result = $db->query("SELECT * FROM peliculas
-					INNER JOIN actuan ON peliculas.idpelicula = actuan.idPelicula
-					INNER JOIN personas ON actuan.idPersona = personas.idPersona
+					LEFT JOIN actuan ON peliculas.idPeliculas = actuan.id_Pelicula
+					LEFT JOIN personas ON actuan.id_Persona = personas.idPersonas
 					WHERE peliculas.titulo LIKE '%$textoBusqueda%'
 					OR peliculas.genero LIKE '%$textoBusqueda%'
 					OR personas.nombre LIKE '%$textoBusqueda%'
@@ -267,21 +280,21 @@
                     // La consulta ha devuelto registros: vamos a mostrarlos
                     // Primero, el formulario de búsqueda
                     echo "<form action='index.php'>
-								<input type='hidden' name='action' value='buscarPelicula'>
+								<input type='hidden' name='action' value='buscarPeliculas'>
                             	<input type='text' name='textoBusqueda'>
 								<input type='submit' value='Buscar'>
                           </form><br>";
                     // Después, la tabla con los datos
                     echo "<table border ='1'>";
                     while ($pelicula = $result->fetch_object()) {
-                        echo "<tr>";
+                       echo "<tr>";
                         echo "<td>" . $pelicula->titulo . "</td>";
                         echo "<td>" . $pelicula->genero . "</td>";
-                        echo "<td>" . $pelicula->nombre . "</td>";
-                        echo "<td>" . $pelicula->apellidos . "</td>";
-                        echo "<td>" . $pelicula->cartel . "</td>";
-                        echo "<td><a href='index.php?action=formularioModificarPeliculas&idpelicula=" . $pelicula->idPelicula . "'>Modificar</a></td>";
-                        echo "<td><a href='index.php?action=borrarPeliculas&idPelicula=" . $pelicula->idPelicula . "'>Borrar</a></td>";
+                        echo "<td>" . $pelicula->pais . "</td>";
+                        echo "<td>" . $pelicula->anyo . "</td>";
+                        echo "<td><img src='" . $pelicula->cartel . "' width='100'></td>";
+                        echo "<td><a href='index.php?action=formularioModificarPelicula&idPeliculas=" . $pelicula->idPeliculas . "'>Modificar</a></td>";
+                        echo "<td><a href='index.php?action=borrarPelicula&idPeliculas=" . $pelicula->idPeliculas . "'>Borrar</a></td>";
                         echo "</tr>";
                     }
                     echo "</table>";
