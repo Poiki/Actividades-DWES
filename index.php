@@ -292,7 +292,7 @@
                         echo "<td>" . $pelicula->genero . "</td>";
                         echo "<td>" . $pelicula->pais . "</td>";
                         echo "<td>" . $pelicula->anyo . "</td>";
-                        echo "<td><img src='" . $pelicula->cartel . "' width='100'></td>";
+                        echo "<td><img src='images/" . $pelicula->cartel . "' width='100'></td>";
                         echo "<td><a href='index.php?action=formularioModificarPelicula&idPeliculas=" . $pelicula->idPeliculas . "'>Modificar</a></td>";
                         echo "<td><a href='index.php?action=borrarPelicula&idPeliculas=" . $pelicula->idPeliculas . "'>Borrar</a></td>";
                         echo "</tr>";
